@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#ffffff" />
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>クイズ練習アプリ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px;
+      margin: 0;
+    }
+
+    #question {
+      font-size: 28px;
+      margin-bottom: 20px;
+      min-height: 3em;
+    }
+
+    input, button {
+      font-size: 24px;
+      padding: 12px 40px;
+      margin: 10px;
+      width: 80%;
+      max-width: 400px;
+    }
+
+    #checkButton.correct {
+      color: red;
+    }
+
+    #checkButton.incorrect {
+      color: blue;
+    }
+
+    #stopButton {
+      background-color: #ff4d4d;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+
+    #fileInput {
+      margin-bottom: 20px;
+    }
+
+    #stats {
+      font-size: 20px;
+      margin: 20px 0;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #mistakesList {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    #mistakesUl {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .mistake-item {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      border-radius: 5px;
+      margin: 10px 0;
+      padding: 15px;
+      color: #721c24;
+      font-size: 18px;
+    }
+
+    @media (max-width: 600px) {
+      input, button {
+        font-size: 20px;
+      }
+
+      #question {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>クイズ練習</h1>
+
+  <input type="file" id="fileInput" accept=".csv" />
+  <br />
+
+  <div id="question">ここに問題が出ます</div>
+  <button id="stopButton" class="hidden" onclick="stopQuestion()">押す</button>
+  <br />
+
+  <input type="text" id="answerInput" placeholder="答えを入力" />
+  <br />
+  <button id="checkButton" onclick="checkAnswer()">答え合わせ</button>
+
+  <div id="stats">
+    <span id="correctCount">0</span> / <span id="totalCount">0</span> 問題解答済み
+  </div>
+
+  <div class="buttons hidden" id="endButtons">
+    <button onclick="restartQuiz()">もう一度</button>
+    <button onclick="reviewMistakes()">振り返る</button>
+  </div>
+
+  <div id="mistakesList" class="hidden">
+    <h2>間違えた問題</h2>
+    <ul id="mistakesUl"></ul>
+  </div>
+
+  <script>
+    let allQuestions = [];
+    let questions = [];
+    let current = 0;
+    let correctAnswersCount = 0;
+    let totalAnswersCount = 0;
+    let mistakes = [];
+    let showingAnswer = false;
+    let questionInterval;
+    let isQuestionStopped = false;
+    let stopIndex = null;
+
+    function normalize(text) {
+      return text.trim().toLowerCase().replace(/\s/g, "");
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    document.getElementById("fileInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        alert("ファイルを選択してください。");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const text = event.target.result;
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+        allQuestions = lines.map(line => {
+          const parts = line.split(/,|\t/).map(p => p.trim()).filter(p => p);
+          return {
+            q: parts[0],
+            a: parts.slice(1),
+            stopAt: null
+          };
+        });
+
+        if (allQuestions.length === 0) {
+          alert("有効な問題が見つかりませんでした。");
+          return;
+        }
+
+        shuffle(allQuestions);
+        questions = allQuestions.slice(0, 10); // ★ ランダム10問抽出
+        current = 0;
+        correctAnswersCount = 0;
+        totalAnswersCount = 0;
+        mistakes = [];
+        showQuestion();
+        document.getElementById("endButtons").classList.add("hidden");
+        document.getElementById("mistakesList").classList.add("hidden");
+        document.getElementById("stats").classList.remove("hidden");
+      };
+
+      reader.readAsText(file, "utf-8");
+    });
+
+    function showQuestion() {
+      const questionElem = document.getElementById("question");
+      const checkBtn = document.getElementById("checkButton");
+      const answerInput = document.getElementById("answerInput");
+
+      checkBtn.textContent = "答え合わせ";
+      checkBtn.classList.remove("correct", "incorrect");
+      answerInput.style.display = "inline-block";
+      answerInput.value = "";
+      showingAnswer = false;
+
+      if (current >= questions.length) {
+        questionElem.textContent = "終了！";
+        answerInput.style.display = "none";
+        checkBtn.style.display = "none";
+        document.getElementById("stopButton").classList.add("hidden");
+        document.getElementById("endButtons").classList.remove("hidden");
+        return;
+      }
+
+      questionElem.innerHTML = `<span style="color: red;">問題</span>`;
+      document.getElementById("stopButton").classList.add("hidden");
+      isQuestionStopped = false;
+      stopIndex = null;
+
+      setTimeout(() => {
+        const qText = questions[current].q;
+        questionElem.textContent = "";
+        document.getElementById("stopButton").classList.remove("hidden");
+
+        let i = 0;
+        questionInterval = setInterval(() => {
+          if (isQuestionStopped) {
+            clearInterval(questionInterval);
+            return;
+          }
+          questionElem.textContent += qText[i];
+          i++;
+          if (i >= qText.length) {
+            clearInterval(questionInterval);
+          }
+        }, 80);
+      }, 1000);
+    }
+
+    function stopQuestion() {
+      isQuestionStopped = true;
+      clearInterval(questionInterval);
+      stopIndex = document.getElementById("question").textContent.length;
+    }
+
+    function checkAnswer() {
+      const answerInput = document.getElementById("answerInput");
+      const checkBtn = document.getElementById("checkButton");
+
+      if (showingAnswer) {
+        current++;
+        showQuestion();
+        return;
+      }
+
+      const userInput = normalize(answerInput.value);
+      const correctAnswers = questions[current].a.map(ans => normalize(ans));
+
+      if (correctAnswers.includes(userInput)) {
+        checkBtn.textContent = "正解（次へ）";
+        checkBtn.classList.add("correct");
+        correctAnswersCount++;
+      } else {
+        checkBtn.textContent = "不正解（次へ）";
+        checkBtn.classList.add("incorrect");
+        if (stopIndex !== null) {
+          questions[current].stopAt = stopIndex;
+        }
+        mistakes.push(questions[current]);
+      }
+
+      totalAnswersCount++;
+      document.getElementById("correctCount").textContent = correctAnswersCount;
+      document.getElementById("totalCount").textContent = totalAnswersCount;
+      answerInput.style.display = "none";
+      showingAnswer = true;
+      document.getElementById("stopButton").classList.add("hidden");
+    }
+
+    function restartQuiz() {
+      shuffle(allQuestions);
+      questions = allQuestions.slice(0, 10); // ★ 再スタートもランダム10問
+      current = 0;
+      correctAnswersCount = 0;
+      totalAnswersCount = 0;
+      mistakes = [];
+      showQuestion();
+      document.getElementById("endButtons").classList.add("hidden");
+      document.getElementById("mistakesList").classList.add("hidden");
+      document.getElementById("stats").classList.remove("hidden");
+    }
+
+    function reviewMistakes() {
+      const mistakesUl = document.getElementById("mistakesUl");
+      mistakesUl.innerHTML = "";
+      mistakes.forEach(mistake => {
+        const li = document.createElement("li");
+        li.classList.add("mistake-item");
+
+        let displayedQ = mistake.q;
+        if (mistake.stopAt !== null && mistake.stopAt < mistake.q.length) {
+          displayedQ =
+            mistake.q.slice(0, mistake.stopAt) +
+            "／" +
+            mistake.q.slice(mistake.stopAt);
+        }
+
+        li.innerHTML = `<span>問題:</span> ${displayedQ}<br><span>正解:</span> ${mistake.a.join(", ")}`;
+        mistakesUl.appendChild(li);
+      });
+      document.getElementById("mistakesList").classList.remove("hidden");
+    }
+  </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(reg => console.log('Service Worker registered:', reg))
+      .catch(err => console.error('Service Worker registration failed:', err));
+  }
+</script>
+
+</body>
+</html>
