@@ -1,0 +1,20 @@
+{
+  "name": "クイズ練習アプリ",
+  "short_name": "クイズ練習",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "https://www.google.com/imgres?q=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A%20%E3%82%AF&imgurl=https%3A%2F%2Fnihongokyoshi-net.com%2Fwp-content%2Fuploads%2F2020%2F09%2Fkatakana_ku.jpg&imgrefurl=https%3A%2F%2Fnihongokyoshi-net.com%2F2020%2F10%2F02%2Fkatakana-ku%2F&docid=moEovUl27WwXJM&tbnid=PZHJwpY1TwMsZM&vet=12ahUKEwi7lN2I96aNAxU8SfUHHWS7FiwQM3oECBgQAA..i&w=640&h=640&hcb=2&ved=2ahUKEwi7lN2I96aNAxU8SfUHHWS7FiwQM3oECBgQAA",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://www.google.com/imgres?q=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A%20%E3%82%AF&imgurl=https%3A%2F%2Fnihongokyoshi-net.com%2Fwp-content%2Fuploads%2F2020%2F09%2Fkatakana_ku.jpg&imgrefurl=https%3A%2F%2Fnihongokyoshi-net.com%2F2020%2F10%2F02%2Fkatakana-ku%2F&docid=moEovUl27WwXJM&tbnid=PZHJwpY1TwMsZM&vet=12ahUKEwi7lN2I96aNAxU8SfUHHWS7FiwQM3oECBgQAA..i&w=640&h=640&hcb=2&ved=2ahUKEwi7lN2I96aNAxU8SfUHHWS7FiwQM3oECBgQAA",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
